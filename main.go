@@ -1,18 +1,22 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
+	_ "embed"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"os"
-	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 )
+
+//go:embed boys.txt
+var bf string
+
+//go:embed girls.txt
+var gf string
 
 func main() {
 	var gender string
@@ -26,72 +30,39 @@ func main() {
 		fmt.Scanln(&gender)
 	}
 
-	var nameFile string // don't remove
-	var err error       // don't remove
+	bNames := strings.Split(bf, " ")
+	bNamesLen := len(bNames)
+	gNames := strings.Split(gf, " ")
+	gNamesLen := len(gNames)
+
+	fmt.Println(bNamesLen, bNames, reflect.TypeOf(bNames))
+	os.Exit(0)
+
+	min := 1
+	var max int
+	var namesList []string
 	gender = strings.ToLower(gender)
 	if gender == "b" || gender == "boy" {
-		nameFile, err = filepath.Abs("boys.txt")
-		if err != nil {
-			log.Fatalln(err)
-		}
+		namesList = bNames
+		max = bNamesLen
 	} else if gender == "g" || gender == "girl" {
-		nameFile, err = filepath.Abs("boys.txt")
-		if err != nil {
-			log.Fatalln(err)
-		}
+		namesList = gNames
+		max = gNamesLen
 	} else {
 		log.Fatalln("Invalid gender")
 	}
 
-	f, err := os.Open(nameFile)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer f.Close()
-
-	min := 1
-	max, err := lineCounter(f)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	rand.Seed(time.Now().UnixNano())
-	randNums := make([]int, 0, numNames)
+	randNums := make([]int, 0, max)
 	for i := 0; i < numNames; i++ {
 		randNums = append(randNums, rand.Intn(max-min)+min)
 	}
 
-	f.Seek(0, 0)
-	scanner := bufio.NewScanner(f)
-	i := 0
-	for scanner.Scan() {
-		i += 1
-		for _, n := range randNums {
-			if i == n {
-				fmt.Println(scanner.Text())
+	for i, v := range namesList {
+		for _, rn := range randNums {
+			if i == rn {
+				fmt.Println(v[i])
 			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Fatalln(err)
-	}
-}
-
-func lineCounter(r io.Reader) (int, error) {
-	buf := make([]byte, 32*1024)
-	count := 0
-	lineSep := []byte{'\n'}
-
-	for {
-		c, err := r.Read(buf)
-		count += bytes.Count(buf[:c], lineSep)
-
-		switch {
-		case err == io.EOF:
-			return count, nil
-
-		case err != nil:
-			return count, err
 		}
 	}
 }
